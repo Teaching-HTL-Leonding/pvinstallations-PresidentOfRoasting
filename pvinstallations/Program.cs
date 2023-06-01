@@ -11,6 +11,14 @@ app.MapGet("/", () => "Hello World!");
 
 app.MapPost("/installations", async (PvInstallationDto installationDto, PvDbContext dbContext) => {
 
+    if (installationDto.Longitude is < -180 or > 180) { return Results.BadRequest("Longitude must be between -180 and 180"); }
+    if (installationDto.Latitude is < -90 or > 90) { return Results.BadRequest("Latitude must be between -90 and 90"); }
+    if (string.IsNullOrWhiteSpace(installationDto.Address)) { return Results.BadRequest("Address must be provided"); }
+    if (string.IsNullOrWhiteSpace(installationDto.OwnerName)) { return Results.BadRequest("Owner name must be provided"); }
+    if (installationDto.Address.Length > 1024) { return Results.BadRequest("Address must be less than 1024 characters"); }
+    if (installationDto.OwnerName.Length > 512) { return Results.BadRequest("Owner name must be less than 512 characters"); }
+    if (!string.IsNullOrWhiteSpace(installationDto.Comments) && installationDto.Comments.Length > 1024) { return Results.BadRequest("Comments must be less than 1024 characters"); }
+
 
     var pvInstallation = new PvInstallation
     {
@@ -31,15 +39,6 @@ app.MapPost("/installations", async (PvInstallationDto installationDto, PvDbCont
     await dbContext.SaveChangesAsync();
     return Results.Json(pvInstallation,statusCode:StatusCodes.Status201Created);
 });
-
-/*
-Create an API with the following endpoints:
-
-POST /installations: An endpoint that accepts a JSON payload with the longitude, latitude, address, owner name, and optional comments of a new installation. This endpoint should create a new PvInstallation and return at least its Id (you can return the entire installation record if you want).
-POST /installations/{id}/deactivate: An endpoint that sets an installation's IsActive flag to false.
-POST /installations/{id}/reports: An endpoint that accepts a JSON payload with produced wattage, household wattage, battery wattage, and grid wattage. The timestamp is filled with the system time (current UTC system time truncated to the current minute; e.g. 2023-05-25T17:02:30 becomes 2023-05-25T17:02:00). This endpoint should create a new ProductionReport for the installation with the provided Id.
-GET /installations/{id}/reports: An endpoint that accepts query parameters for a start timestamp and a duration in minutes. This endpoint should return the sum of the ProducedWattage of the installation with the provided Id during the specified period.
-*/
 
 app.MapPost("/installations/{id}/deactivate", async (PvDbContext dbContext, int id) => {
     var pvInstallation = await dbContext.PvInstallations.FindAsync(id);
